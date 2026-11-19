@@ -1,0 +1,23 @@
+# 0002. One file per connection, size sent first, checked at the end
+
+- Status: Accepted
+- Date: 2026-11-19
+
+The client announces the file size, streams the file in 1 KiB chunks, and the server verifies
+the received size, so a broken transfer is detected instead of silently kept.
+
+## Technical details
+- **Server** (`server.py`): binds `('', 9090)`, `listen(3)`, picks the output file with a Tk
+  `askopenfilename` dialog, accepts one connection, swaps greetings, reads the size, then
+  `recv(1024)` until the announced size is reached (`settimeout(10)` per chunk).
+- **Check**: compares `os.path.getsize` with the announced size; on a mismatch prints both
+  and asks whether to delete the file; on success sends "File has load correct".
+- **Client** (`client.py`): connects to `127.0.0.1:9090`, picks the input file with Tk, sends
+  the size then 1 KiB reads; a thread prints whatever the server says.
+- **Known limits**: the size and the first chunk can arrive in one `recv` (no framing); the
+  client is hard-wired to localhost; one file per run.
+
+## Technologies and alternatives
+- Involved: Python 3 standard library (`socket`, `threading`, `tkinter`).
+- Alternatives: a length-prefixed binary header (`struct`) would fix the framing; `sendfile`
+  / HTTP (not the exercise).
